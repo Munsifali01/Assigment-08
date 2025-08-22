@@ -1,0 +1,81 @@
+import pandas as pd
+import numpy as np
+import re
+import nltk
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+# Download NLTK resources (first time only)
+nltk.download('stopwords')
+nltk.download('wordnet')
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+
+# =====================
+# 1. Load Dataset
+# =====================
+# Make sure IMDB Dataset.csv is in the same folder
+df = pd.read_csv("IMDB Dataset.csv")
+print("Dataset Loaded ✅")
+print(df.head())
+
+# =====================
+# 2. Preprocessing
+# =====================
+stop_words = set(stopwords.words('english'))
+lemmatizer = WordNetLemmatizer()
+
+def clean_text(text):
+    text = re.sub(r'[^a-zA-Z]', ' ', text)  # remove non-alphabets
+    text = text.lower().split()
+    text = [lemmatizer.lemmatize(word) for word in text if word not in stop_words]
+    return " ".join(text)
+
+df['review_clean'] = df['review'].apply(clean_text)
+print("Text Preprocessing Done ✅")
+
+# =====================
+# 3. Vectorization (TF-IDF)
+# =====================
+vectorizer = TfidfVectorizer(max_features=5000)
+X = vectorizer.fit_transform(df['review_clean']).toarray()
+y = df['sentiment'].map({'positive': 1, 'negative': 0})
+
+# =====================
+# 4. Train-Test Split
+# =====================
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# =====================
+# 5. Train Model (Logistic Regression)
+# =====================
+model = LogisticRegression(max_iter=200)
+model.fit(X_train, y_train)
+print("Model Training Done ✅")
+
+# =====================
+# 6. Predictions
+# =====================
+y_pred = model.predict(X_test)
+
+# =====================
+# 7. Evaluation
+# =====================
+print("\n📊 Model Evaluation Results:")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(5,4))
+plt.imshow(cm, cmap='Blues')
+plt.title("Confusion Matrix")
+plt.colorbar()
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
